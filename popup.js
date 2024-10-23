@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const tokenStatus = document.getElementById('tokenStatus');
     const channelStatus = document.getElementById('channelStatus');
     const keywordFilter = document.getElementById('keywordFilter');
+    const serverSelect = document.getElementById('serverSelect');
+    const channelSelect = document.getElementById('channelSelect');
+    const exportServerSelect = document.getElementById('exportServerSelect');
+    const exportChannelSelect = document.getElementById('exportChannelSelect');
+    const exportButton = document.getElementById('exportButton');
     const statsDiv = document.getElementById('stats');
     const totalProcessedSpan = document.getElementById('totalProcessed');
     const totalDeletedSpan = document.getElementById('totalDeleted');
@@ -37,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (status.token) {
             tokenStatus.classList.remove('red');
             tokenStatus.classList.add('green');
+            fetchServers();
         } else {
             tokenStatus.classList.remove('green');
             tokenStatus.classList.add('red');
@@ -59,21 +65,44 @@ document.addEventListener('DOMContentLoaded', function() {
         statsDiv.style.display = 'block';
     }
 
-    // Check initial status
-    chrome.runtime.sendMessage({action: 'getStatus'}, function(response) {
-        if (chrome.runtime.lastError) {
-            console.error('Error getting status:', chrome.runtime.lastError);
-        } else {
-            updateStatus(response);
+    function fetchServers() {
+        chrome.runtime.sendMessage({action: 'fetchServers'}, function(response) {
+            if (response && response.servers) {
+                populateDropdown(serverSelect, response.servers);
+                populateDropdown(exportServerSelect, response.servers);
+            }
+        });
+    }
+
+    function populateDropdown(dropdown, items) {
+        dropdown.innerHTML = '<option value="">Select</option>';
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            dropdown.appendChild(option);
+        });
+    }
+
+    serverSelect.addEventListener('change', function() {
+        const serverId = serverSelect.value;
+        if (serverId) {
+            chrome.runtime.sendMessage({action: 'fetchChannels', serverId: serverId}, function(response) {
+                if (response && response.channels) {
+                    populateDropdown(channelSelect, response.channels);
+                }
+            });
         }
     });
 
-    // Listen for status updates and deletion progress
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.action === 'statusUpdate') {
-            updateStatus(request);
-        } else if (request.action === 'deletionProgress') {
-            updateStats(request);
+    exportServerSelect.addEventListener('change', function() {
+        const serverId = exportServerSelect.value;
+        if (serverId) {
+            chrome.runtime.sendMessage({action: 'fetchChannels', serverId: serverId}, function(response) {
+                if (response && response.channels) {
+                    populateDropdown(exportChannelSelect, response.channels);
+                }
+            });
         }
     });
 
@@ -95,11 +124,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
     deleteButton.addEventListener('click', function() {
         const keyword = keywordFilter.value.trim();
+        const serverId = serverSelect.value;
+        const channelId = channelSelect.value;
         chrome.runtime.sendMessage({
             action: 'deleteMessages',
-            keyword: keyword
+            keyword: keyword,
+            serverId: serverId,
+            channelId: channelId
         });
         // Reset stats when starting a new deletion
         updateStats({totalProcessed: 0, totalDeleted: 0});
     });
+
+    exportButton.addEventListener('click', function() {
+        const serverId = exportServerSelect.value;
+        const channelId = exportChannelSelect.value;
+        chrome.runtime.sendMessage({
+            action: 'exportChat',
+            serverId: serverId,
+            channelId: channelId
+        });
+    });
+
+    // Check initial status
+    chrome.runtime.sendMessage({action: 'getStatus'}, function(response) {
+        if (chrome.runtime.lastError) {
+            console.error('Error getting status:', chrome.runtime.lastError);
+        } else {
+            updateStatus(response);
+        }
+    });
+
+    // Listen for status updates and deletion progress
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action === 'statusUpdate') {
+            updateStatus(request);
+        } else if (request.action === 'deletionProgress') {
+            updateStats(request);
+        }
+    });
+
+    window.showTab = function(tabId) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+    };
 });
