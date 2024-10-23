@@ -146,6 +146,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    document.getElementById('deleteTabButton').addEventListener('click', function() {
+        showTab('deleteTab');
+    });
+
+    document.getElementById('exportTabButton').addEventListener('click', function() {
+        showTab('exportTab');
+    });
+
+    document.getElementById('editTabButton').addEventListener('click', function() {
+        showTab('editTab');
+    });
+
     // Check initial status
     chrome.runtime.sendMessage({action: 'getStatus'}, function(response) {
         if (chrome.runtime.lastError) {
@@ -161,8 +173,20 @@ document.addEventListener('DOMContentLoaded', function() {
             updateStatus(request);
         } else if (request.action === 'deletionProgress') {
             updateStats(request);
+        } else if (request.action === 'downloadChat') {
+            downloadAsFile(request.content, request.filename);
         }
     });
+
+    function downloadAsFile(content, filename) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
     window.showTab = function(tabId) {
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));

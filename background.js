@@ -136,7 +136,11 @@ async function exportChat(serverId, channelId) {
     try {
         const messages = await fetchAllMessages(channelId);
         const formattedMessages = formatMessagesForExport(messages);
-        downloadAsFile(formattedMessages, `chat_export_${serverId}_${channelId}.txt`);
+        chrome.runtime.sendMessage({
+            action: 'downloadChat',
+            content: formattedMessages,
+            filename: `chat_export_${serverId}_${channelId}.txt`
+        });
     } catch (error) {
         console.error('Error exporting chat:', error);
     }
@@ -146,7 +150,7 @@ async function fetchAllMessages(channelId) {
     let allMessages = [];
     let before = null;
     while (true) {
-        const messages = await fetchMessages(channelId, before);
+        const messages = await fetchMessages(before);
         if (messages.length === 0) {
             break;
         }
@@ -157,17 +161,11 @@ async function fetchAllMessages(channelId) {
 }
 
 function formatMessagesForExport(messages) {
-    return messages.map(msg => `${msg.author.username}: ${msg.content}`).join('\n');
-}
-
-function downloadAsFile(content, filename) {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    return messages.reverse().map(msg => {
+        const date = new Date(msg.timestamp);
+        const formattedDate = date.toLocaleString();
+        return `[${formattedDate}] ${msg.author.username}: ${msg.content}`;
+    }).join('\n');
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
