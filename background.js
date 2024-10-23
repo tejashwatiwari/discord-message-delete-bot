@@ -96,8 +96,90 @@ function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Listen for messages from content.js and popup.js
+async function fetchServers() {
+    try {
+        const response = await fetch('https://discord.com/api/v9/users/@me/guilds', {
+            headers: { 'Authorization': discordToken }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch servers: ${response.status} ${response.statusText}`);
+        }
+
+        const servers = await response.json();
+        return servers.map(server => ({ id: server.id, name: server.name }));
+    } catch (error) {
+        console.error('Error fetching servers:', error);
+        return [];
+    }
+}
+
+async function fetchChannels(serverId) {
+    try {
+        const response = await fetch(`https://discord.com/api/v9/guilds/${serverId}/channels`, {
+            headers: { 'Authorization': discordToken }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch channels: ${response.status} ${response.statusText}`);
+        }
+
+        const channels = await response.json();
+        return channels.filter(channel => channel.type === 0).map(channel => ({ id: channel.id, name: channel.name }));
+    } catch (error) {
+        console.error('Error fetching channels:', error);
+        return [];
+    }
+}
+
+async function exportChat(serverId, channelId) {
+    try {
+        const messages = await fetchAllMessages(channelId);
+        const formattedMessages = formatMessagesForExport(messages);
+        chrome.runtime.sendMessage({
+            action: 'downloadChat',
+            content: formattedMessages,
+            filename: `chat_export_${serverId}_${channelId}.txt`
+        });
+    } catch (error) {
+        console.error('Error exporting chat:', error);
+    }
+}
+
+async function fetchAllMessages(channelId) {
+    let allMessages = [];
+    let before = null;
+    while (true) {
+        const messages = await fetchMessages(before);
+        if (messages.length === 0) {
+            break;
+        }
+        allMessages = allMessages.concat(messages);
+        before = messages[messages.length - 1].id;
+    }
+    return allMessages;
+}
+
+function formatMessagesForExport(messages) {
+    return messages.reverse().map(msg => {
+        const date = new Date(msg.timestamp);
+        const formattedDate = date.toLocaleString();
+        return `[${formattedDate}] ${msg.author.username}: ${msg.content}`;
+    }).join('\n');
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'exportChat') {
+        exportChat(request.serverId, request.channelId);
+    }
+    if (request.action === 'fetchServers') {
+        fetchServers().then(servers => sendResponse({ servers })).catch(() => sendResponse({ servers: [] }));
+        return true;
+    }
+    if (request.action === 'fetchChannels') {
+        fetchChannels(request.serverId).then(channels => sendResponse({ channels })).catch(() => sendResponse({ channels: [] }));
+        return true;
+    }
     if (request.action === 'setTokenAndChannelId') {
         discordToken = request.token;
         discordChannelId = request.channelId;

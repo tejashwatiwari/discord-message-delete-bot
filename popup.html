@@ -7,6 +7,29 @@
             width: 300px;
             padding: 15px;
             font-family: Arial, sans-serif;
+            background-color: #2c2f33;
+            color: #ffffff;
+        }
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
+        .tab-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+        .tab-button {
+            background-color: #006400;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 10px;
+            flex-grow: 1;
+            margin: 0 5px;
         }
         .status-item {
             display: flex;
@@ -28,14 +51,14 @@
         .status-text {
             flex-grow: 1;
         }
-        input, button {
+        input, select, button {
             width: 100%;
             padding: 10px;
             margin-top: 10px;
             box-sizing: border-box;
         }
         button {
-            background-color: #7289da;
+            background-color: #006400;
             color: white;
             border: none;
             border-radius: 4px;
@@ -53,20 +76,53 @@
     </style>
 </head>
 <body>
-    <div class="status-item">
-        <div id="tokenStatus" class="status-icon red"></div>
-        <span class="status-text">Token</span>
+    <div class="tab-buttons">
+        <button class="tab-button" id="deleteTabButton">Delete</button>
+        <button class="tab-button" id="exportTabButton">Export</button>
+        <button class="tab-button" id="editTabButton">Bulk Edit</button>
     </div>
-    <div class="status-item">
-        <div id="channelStatus" class="status-icon red"></div>
-        <span class="status-text">Channel ID</span>
+    <div id="deleteTab" class="tab active">
+        <div class="status-item">
+            <div id="tokenStatus" class="status-icon red"></div>
+            <span class="status-text">Token</span>
+        </div>
+        <div class="status-item">
+            <div id="channelStatus" class="status-icon red"></div>
+            <span class="status-text">Channel ID</span>
+        </div>
+        <select id="serverSelect">
+            <option value="">Select Server</option>
+        </select>
+        <select id="channelSelect">
+            <option value="">Select Channel</option>
+        </select>
+        <button id="grabButton">Grab Token and Channel ID</button>
+        <input type="text" id="keywordFilter" placeholder="Enter keyword to filter (optional)">
+        <button id="deleteButton" disabled>Delete Messages</button>
+        <div id="stats">
+            <div>Total Processed: <span id="totalProcessed">0</span></div>
+            <div>Total Deleted: <span id="totalDeleted">0</span></div>
+        </div>
     </div>
-    <button id="grabButton">Grab Token and Channel ID</button>
-    <input type="text" id="keywordFilter" placeholder="Enter keyword to filter (optional)">
-    <button id="deleteButton" disabled>Delete Messages</button>
-    <div id="stats">
-        <div>Total Processed: <span id="totalProcessed">0</span></div>
-        <div>Total Deleted: <span id="totalDeleted">0</span></div>
+    <div id="exportTab" class="tab">
+        <select id="exportServerSelect">
+            <option value="">Select Server</option>
+        </select>
+        <select id="exportChannelSelect">
+            <option value="">Select Channel</option>
+        </select>
+        <button id="exportButton">Export Chat</button>
+    </div>
+    <div id="editTab" class="tab">
+        <select id="editServerSelect">
+            <option value="">Select Server</option>
+        </select>
+        <select id="editChannelSelect">
+            <option value="">Select Channel</option>
+        </select>
+        <input type="text" id="editKeyword" placeholder="Enter keyword to search">
+        <input type="text" id="editReplacement" placeholder="Enter replacement text">
+        <button id="editButton">Bulk Edit Messages</button>
     </div>
     <script src="popup.js"></script>
 </body>
