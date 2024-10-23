@@ -4,23 +4,37 @@
     <title>Discord Message Deleter</title>
     <style>
         body {
-            width: 200px;
-            padding: 10px;
+            width: 300px;
+            padding: 15px;
             font-family: Arial, sans-serif;
         }
-        #status {
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .status-icon {
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background-color: red;
-            margin-bottom: 10px;
+            margin-right: 10px;
         }
-        #status.ready {
-            background-color: green;
+        .status-icon.red {
+            background-color: #ff4136;
         }
-        button {
+        .status-icon.green {
+            background-color: #2ecc40;
+        }
+        .status-text {
+            flex-grow: 1;
+        }
+        input, button {
             width: 100%;
             padding: 10px;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+        button {
             background-color: #7289da;
             color: white;
             border: none;
@@ -31,11 +45,29 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
+        #stats {
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="status"></div>
-    <button id="deleteButton">Delete Messages</button>
+    <div class="status-item">
+        <div id="tokenStatus" class="status-icon red"></div>
+        <span class="status-text">Token</span>
+    </div>
+    <div class="status-item">
+        <div id="channelStatus" class="status-icon red"></div>
+        <span class="status-text">Channel ID</span>
+    </div>
+    <button id="grabButton">Grab Token and Channel ID</button>
+    <input type="text" id="keywordFilter" placeholder="Enter keyword to filter (optional)">
+    <button id="deleteButton" disabled>Delete Messages</button>
+    <div id="stats">
+        <div>Total Processed: <span id="totalProcessed">0</span></div>
+        <div>Total Deleted: <span id="totalDeleted">0</span></div>
+    </div>
     <script src="popup.js"></script>
 </body>
 </html>

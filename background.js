@@ -7,30 +7,31 @@ let discordToken = '';
 let discordChannelId = '';
 
 function updatePopupStatus() {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    chrome.runtime.sendMessage({
+        action: 'statusUpdate',
+        token: !!discordToken,
+        channelId: !!discordChannelId
+    }, function(response) {
         if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError);
-            return;
+            console.log("Popup is not open. Status update ignored.");
         }
-        try {
-            chrome.runtime.sendMessage({
-                action: 'statusUpdate',
-                token: !!discordToken,
-                channelId: !!discordChannelId
-            }, function(response) {
-                if (chrome.runtime.lastError) {
-                    // Ignore the error if the popup is not open
-                    console.log("Popup is not open. Status update ignored.");
-                }
-            });
-        } catch (error) {
-            console.error("Error sending status update:", error);
+    });
+}
+
+function updateDeletionProgress(totalProcessed, totalDeleted) {
+    chrome.runtime.sendMessage({
+        action: 'deletionProgress',
+        totalProcessed: totalProcessed,
+        totalDeleted: totalDeleted
+    }, function(response) {
+        if (chrome.runtime.lastError) {
+            console.log("Popup is not open. Progress update ignored.");
         }
     });
 }
 
 // Function to authenticate and delete messages
-async function deleteMessages() {
+async function deleteMessages(keyword = '') {
     try {
         if (!discordToken || !discordChannelId) {
             throw new Error('Token or Channel ID not set');
@@ -38,6 +39,7 @@ async function deleteMessages() {
 
         let before = null;
         let grandTotal = 0;
+        let deletedTotal = 0;
 
         while (true) {
             const messages = await fetchMessages(before);
@@ -48,12 +50,18 @@ async function deleteMessages() {
             grandTotal += messages.length;
 
             for (const message of messages) {
-                await deleteMessage(message.id);
-                await wait(1000); // Wait 1 second between deletions
+                if (!keyword || (message.content && message.content.toLowerCase().includes(keyword.toLowerCase()))) {
+                    await deleteMessage(message.id);
+                    deletedTotal++;
+                    await wait(1000); // Wait 1 second between deletions
+                }
+                updateDeletionProgress(grandTotal, deletedTotal);
             }
 
             before = messages[messages.length - 1].id;
         }
+
+        console.log(`Finished deleting messages. Total processed: ${grandTotal}, Total deleted: ${deletedTotal}`);
     } catch (error) {
         console.error('Error in deleteMessages:', error);
     }
@@ -61,32 +69,15 @@ async function deleteMessages() {
 
 async function fetchMessages(before = null) {
     const url = `https://discord.com/api/v9/channels/${discordChannelId}/messages?limit=100${before ? `&before=${before}` : ''}`;
-    try {
-        const response = await fetch(url, {
-            headers: { 'Authorization': discordToken }
-        });
+    const response = await fetch(url, {
+        headers: { 'Authorization': discordToken }
+    });
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Failed to fetch messages: ${response.status} ${response.statusText}\nBody: ${errorBody}`);
-        }
-
-        const responseText = await response.text();
-        let messages;
-        try {
-            messages = JSON.parse(responseText);
-        } catch (error) {
-            throw new Error('Failed to parse response as JSON');
-        }
-
-        if (!Array.isArray(messages)) {
-            throw new Error('Unexpected response format. Expected an array of messages.');
-        }
-
-        return messages;
-    } catch (error) {
-        throw error;
+    if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.status} ${response.statusText}`);
     }
+
+    return await response.json();
 }
 
 async function deleteMessage(messageId) {
@@ -113,7 +104,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         updatePopupStatus();
     }
     if (request.action === 'deleteMessages') {
-        deleteMessages();
+        deleteMessages(request.keyword);
     }
     if (request.action === 'getStatus') {
         sendResponse({
