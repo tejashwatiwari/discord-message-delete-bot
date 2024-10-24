@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const channelSelect = document.getElementById('channelSelect');
     const exportServerSelect = document.getElementById('exportServerSelect');
     const exportChannelSelect = document.getElementById('exportChannelSelect');
-    const exportButton = document.getElementById('exportButton');
     const statsDiv = document.getElementById('stats');
     const totalProcessedSpan = document.getElementById('totalProcessed');
     const totalDeletedSpan = document.getElementById('totalDeleted');
@@ -152,10 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('exportTabButton').addEventListener('click', function() {
         showTab('exportTab');
-    });
-
-    document.getElementById('editTabButton').addEventListener('click', function() {
-        showTab('editTab');
     });
 
     // Check initial status

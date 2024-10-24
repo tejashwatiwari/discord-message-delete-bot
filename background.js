@@ -168,6 +168,18 @@ function formatMessagesForExport(messages) {
     }).join('\n');
 }
 
+function grabTokenAndChannelId() {
+    // Logic to grab token and channel ID
+    // This is a placeholder for the actual implementation
+    discordToken = 'fetched_token'; // Replace with actual fetching logic
+    discordChannelId = 'fetched_channel_id'; // Replace with actual fetching logic
+    updatePopupStatus();
+    chrome.runtime.sendMessage({
+        action: 'disclaimer',
+        message: 'If token ID and channel ID don\'t turn green, try refreshing your Discord page.'
+    });
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'exportChat') {
         exportChat(request.serverId, request.channelId);
@@ -179,6 +191,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'fetchChannels') {
         fetchChannels(request.serverId).then(channels => sendResponse({ channels })).catch(() => sendResponse({ channels: [] }));
         return true;
+    }
+    if (request.action === 'grabTokenAndChannelId') {
+        grabTokenAndChannelId();
     }
     if (request.action === 'setTokenAndChannelId') {
         discordToken = request.token;
